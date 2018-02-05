@@ -1,48 +1,93 @@
-import { select, event } from 'd3-selection';
+import { select, event, selectAll } from 'd3-selection';
+import { birthData } from './birthData';
 
-type Character = { char: string; count: number };
+type Character = {
+  char: string;
+  count: number;
+};
 
-select('#countButton').on('click', () => {
+let width = 700;
+let height = 300;
+let padding = 20;
+
+select('#reset').on('click', function() {
+  selectAll('.letter').remove();
+
+  select('#phrase').text('');
+
+  select('#count').text('');
+});
+
+select('form').on('submit', function() {
   event.preventDefault();
-  const input = select('input');
-  const inputText: string = input.property('value');
+  let input = select('input');
+  let text = input.property('value');
+  let freq = getFrequencies(text);
 
-  const values: Character[] = inputText
-    .split('')
-    .sort()
-    .reduce(
-      (acc: Character[], cur: string) => {
-        const index = acc.findIndex(a => a.char === cur);
-        const val = { char: cur, count: 1 };
-        const newArr = acc.slice();
-        if (index >= 0) {
-          newArr[index].count += 1;
-          return [...newArr];
-        }
+  let letters = select('svg')
+    .attr('width', width)
+    .attr('height', height)
+    .selectAll('rect')
+    .data(freq, function(d) {
+      return (d as Character).char;
+    });
 
-        return [...newArr, val];
-      },
-      [] as Character[]
-    );
-  const letters = select('#letters').selectAll('div');
+  letters
+    .attr('fill', 'yellow')
+    .exit()
+    .remove();
 
-  const updated = letters.classed('new', false).data(values, d => {
-    return (d as Character).char;
-  });
-
-  updated.exit().remove();
-
-  updated
+  letters
     .enter()
-    .append('div')
-    .classed('letter new', true)
-    .merge(updated)
-    .style('margin', '0 5px')
-    .style('width', '20px')
-    .text(d => d.char)
-    .style('height', d => d.count * 30 + 'px');
+    .append('rect')
+    .attr('fill', 'green')
+    .merge(letters)
+    .attr('x', (d, i) => {
+      return i * width / freq.length;
+    })
+    .attr('width', () => width / freq.length - padding)
+    .attr('y', d => {
+      return height - d.count * 20;
+    })
+    .attr('height', d => d.count * 20);
 
-  select('#phrase').text(`Analysis of: ${inputText}`);
-  select('#count').text(`(New characters: ${updated.enter().nodes().length})`);
+  let character = select('svg')
+    .selectAll('text')
+    .data(freq, function(d) {
+      return (d as Character).char;
+    });
+
+  character
+    .attr('stroke', 'black')
+    .exit()
+    .remove();
+
+  character
+    .enter()
+    .append('text')
+    .attr('stroke', 'red')
+    .merge(character)
+    .text(d => d.char)
+    .attr('x', (d, i) => i * width / freq.length + (width / freq.length - padding) / 2)
+    .attr('y', d => height - d.count * 30)
+    .attr('text-anchor', 'middle')
+    .attr('alignment-baseline', 'middle')
+    .attr('font-size', '1.5em');
+
+  select('#phrase').text('Analysis of: ' + text);
+
+  select('#count').text('(New characters: ' + letters.enter().nodes().length + ')');
+
   input.property('value', '');
 });
+
+function getFrequencies(str: string) {
+  let sorted = str.split('').sort();
+  let data: Character[] = [];
+  for (let i = 0; i < sorted.length; i++) {
+    let last = data[data.length - 1];
+    if (last && last.char === sorted[i]) last.count++;
+    else data.push({ char: sorted[i], count: 1 });
+  }
+  return data;
+}
