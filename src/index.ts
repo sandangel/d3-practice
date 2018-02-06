@@ -27,21 +27,23 @@ select('form').on('submit', function() {
   let letters = select('svg')
     .attr('width', width)
     .attr('height', height)
-    .selectAll('rect')
+    .selectAll('g')
     .data(freq, function(d) {
       return (d as Character).char;
     });
 
-  letters
-    .attr('fill', 'yellow')
-    .exit()
-    .remove();
+  letters.select('rect').attr('fill', 'yellow');
 
-  letters
-    .enter()
-    .append('rect')
-    .attr('fill', 'green')
+  letters.exit().remove();
+
+  const bar = letters.enter().append('g');
+
+  bar.append('rect').attr('fill', 'green');
+  bar.append('text');
+
+  bar
     .merge(letters)
+    .select('rect')
     .attr('x', (d, i) => {
       return i * width / freq.length;
     })
@@ -51,27 +53,14 @@ select('form').on('submit', function() {
     })
     .attr('height', d => d.count * 20);
 
-  let character = select('svg')
-    .selectAll('text')
-    .data(freq, function(d) {
-      return (d as Character).char;
-    });
-
-  character
-    .attr('stroke', 'black')
-    .exit()
-    .remove();
-
-  character
-    .enter()
-    .append('text')
-    .attr('stroke', 'red')
-    .merge(character)
+  bar
+    .merge(letters)
+    .select('text')
     .text(d => d.char)
     .attr('x', (d, i) => i * width / freq.length + (width / freq.length - padding) / 2)
-    .attr('y', d => height - d.count * 30)
+    .attr('y', d => height - d.count * 20 - 6)
     .attr('text-anchor', 'middle')
-    .attr('alignment-baseline', 'middle')
+    .attr('alignment-baseline', 'baseline')
     .attr('font-size', '1.5em');
 
   select('#phrase').text('Analysis of: ' + text);
